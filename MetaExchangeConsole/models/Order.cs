@@ -12,5 +12,6 @@ namespace MetaExchangeConsole.models
         public string Kind { get; set; } // Limit or Market
         public decimal Amount { get; set; } // Amount of BTC
         public decimal Price { get; set; } // Price in EUR
+        public decimal PricePerUnit { get { return Price / Amount; } } //Price per unit
     }
 }
