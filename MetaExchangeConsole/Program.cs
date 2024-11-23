@@ -52,15 +52,6 @@ namespace MetaExchangeConsole
                     }
                     while (string.IsNullOrEmpty(OrderTypeReply));
 
-                    int bookIndex = 0;
-                    Console.WriteLine(bookQuestion);
-                    while (int.TryParse(Console.ReadLine(), out bookIndex) == false || bookIndex > books.Count || bookIndex <= 0)
-                    {
-                        Console.Clear();
-                        Console.WriteLine("Wrong input, try again...");
-                        Console.WriteLine(bookQuestion);
-                    }
-
                     string ammoutnQuestion = string.Format("How {0} are you {1}",
                         type.Equals("Buy") ? "many" : "much",
                         type.Equals("Buy") ? "buying" : "selling");
@@ -74,34 +65,22 @@ namespace MetaExchangeConsole
                         Console.WriteLine(ammoutnQuestion);
                     }
 
-                    List<Order> bestGlobal = null;
-                    List<Order> bestOne = null;
+                    List<Order> bestAll = null;
 
-                    switch (type)
-                    {
-                        case "Buy":
-                            bestGlobal = FindBestGlobal(books, type, ammount);
-                            bestOne = FindBestOne(books[bookIndex - 1], type, ammount);
-                            break;
-                        case "Sell":
-                            bestGlobal = FindBestGlobal(books, type, ammount);
-                            bestOne = FindBestOne(books[bookIndex - 1], type, ammount);
-                            break;
-                        default:
-                            Console.WriteLine("How did you get here?");
-                            break;
-                    }
+                    bestAll = FindBestAll(books, type, ammount);
 
-                    Console.WriteLine("The best order for {0} for the selected book is this: ", type);
-                    Console.WriteLine(JsonConvert.SerializeObject(bestOne, Formatting.Indented));
-                    decimal sumAmmount = bestOne.Sum(x => x.Amount);
-                    decimal sumPrice = bestOne.Sum(x => x.Price);
+                    Console.WriteLine("The best order combination for {0} is this: ", type);
+                    Console.WriteLine(JsonConvert.SerializeObject(bestAll, Formatting.Indented));
+                    decimal sumAmmount = bestAll.Sum(x => x.Amount);
+                    decimal sumPrice = bestAll.Sum(x => x.Price);
                     Console.WriteLine("Summarized: Ammount({0}), Price({1})", sumAmmount, sumPrice);
-                    Console.WriteLine("Or this for all books: ");
-                    Console.WriteLine(JsonConvert.SerializeObject(bestGlobal, Formatting.Indented));
-                    sumAmmount = bestGlobal.Sum(x => x.Amount);
-                    sumPrice = bestGlobal.Sum(x => x.Price);
-                    Console.WriteLine("Summarized: Ammount({0}), Price({1})", sumAmmount, sumPrice);
+                    
+                    //Console.WriteLine("Or knapstack: ");
+                    //Console.WriteLine(JsonConvert.SerializeObject(bestKnapsack, Formatting.Indented));
+                    //sumAmmount = bestKnapsack.Sum(x => x.Amount);
+                    //sumPrice = bestKnapsack.Sum(x => x.Price);
+                    //Console.WriteLine("Summarized: Ammount({0}), Price({1})", sumAmmount, sumPrice);
+
                     Console.WriteLine("type 'EXIT' to exit");
                     if (Console.ReadLine().ToUpper().Equals("EXIT"))
                     {
@@ -122,6 +101,29 @@ namespace MetaExchangeConsole
                 Console.ReadKey();
             }
         }
+        private static List<Order> FindBestAll(List<OrderBook> books, string type, decimal ammount)
+        {
+            decimal sumPrice = 0;
+            decimal sumAmmount = 0;
+            List<Order> best = null;
+            foreach (var book in books)
+            {
+                List<Order> best2 = FindBestOne(book, type, ammount);
+                decimal sumPrice2 = best2.Sum(x => x.Price);
+                decimal sumAmmount2 = best2.Sum(x => x.Amount);
+
+                if (best == null || 
+                    ((type.ToUpper().Equals("BUY") ? sumPrice2 < sumPrice : sumPrice < sumPrice2) &&
+                    (sumAmmount2 > sumAmmount && sumAmmount2 <= ammount))
+                    ) 
+                {
+                    best = best2;
+                    sumPrice = sumPrice2;
+                    sumAmmount = sumAmmount2;
+                }
+            }
+            return best;
+        }
 
         private static List<Order> FindBestGlobal(List<OrderBook> books, string type, decimal ammount)
         {
@@ -133,7 +135,7 @@ namespace MetaExchangeConsole
 
         private static List<Order> FindBestOne(OrderBook books, string type, decimal ammount)
         {
-            List<Order> orders = type.ToUpper() == "BUY" ? books.Bids.Where(x => x.Order.Amount <= ammount).Select(x => x.Order).ToList() : books.Asks.Where(x => x.Order.Amount <= ammount).Select(x => x.Order).ToList();
+            List<Order> orders = type.ToUpper() == "BUY" ? books.Asks.Where(x => x.Order.Amount <= ammount).Select(x => x.Order).ToList() : books.Bids.Where(x => x.Order.Amount <= ammount).Select(x => x.Order).ToList();
             return FindBest(type, ammount, orders);
         }
         
