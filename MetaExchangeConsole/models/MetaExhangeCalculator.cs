@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -14,7 +15,7 @@ namespace MetaExchangeConsole.models
 
         public static MetaExhangeCalculator Instance => _lazyInstance.Value;
 
-        private List<Order> FindBestAll(string type, decimal ammount, string path = null)
+        public List<Order> FindBestAll(string type, decimal ammount, string path = null)
         {
             if (OrderBooks == null)
             {
@@ -88,7 +89,14 @@ namespace MetaExchangeConsole.models
 #if DEBUG
                 if (string.IsNullOrEmpty(filePath))
                 {
-                    filePath = @"C:\Users\Tadej\Documents\Projects\metaExchangeTask_backend_slo_2024\metaExchangeTask_backend_slo_2024\order_books_data\order_books_data";
+                    if (Environment.OSVersion.Platform == PlatformID.Unix)
+                    {
+                        filePath = "/usr/local/bin/order_books_data/order_books_data";  // Linux path
+                    }
+                    else
+                    {
+                        filePath = @"C:\Users\Tadej\Documents\Projects\metaExchangeTask_backend_slo_2024\metaExchangeTask_backend_slo_2024\order_books_data\order_books_data";
+                    }
                 }
 #endif
                 using (var reader = new StreamReader(filePath))
@@ -110,7 +118,7 @@ namespace MetaExchangeConsole.models
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                Debug.WriteLine(e.Message);
             }
             return ret;
         }
