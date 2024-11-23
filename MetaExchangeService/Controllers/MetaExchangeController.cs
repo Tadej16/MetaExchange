@@ -1,7 +1,10 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using MetaExchangeConsole.models;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -20,9 +23,18 @@ namespace MetaExchangeService.Controllers
         }
 
         [HttpPost]
-        public string Post(string type, decimal ammount)
+        public string Post(string type, decimal ammount, string path = null)
         {
-            return "haha " + type + " " + ammount;
+            try
+            {
+                var ret = MetaExhangeCalculator.Instance.FindBestAll(type, ammount, path);
+                return JsonConvert.SerializeObject(ret, Formatting.Indented);
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine(e.Message);
+                return e.Message;
+            }
         }
     }
 }
