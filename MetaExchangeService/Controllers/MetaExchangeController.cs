@@ -27,7 +27,7 @@ namespace MetaExchangeService.Controllers
         {
             try
             {
-                var ret = MetaExhangeCalculator.Instance.FindBestAll(type, ammount, path);
+                var ret = MetaExhangeCalculator.Instance.FindBestAll(type, ammount, null, path);
                 return JsonConvert.SerializeObject(ret, Formatting.Indented);
             }
             catch (Exception e)

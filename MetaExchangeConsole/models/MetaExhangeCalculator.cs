@@ -11,15 +11,19 @@ namespace MetaExchangeConsole.models
     public class MetaExhangeCalculator
     {
         private static Lazy<MetaExhangeCalculator> _lazyInstance = new Lazy<MetaExhangeCalculator>(() => new MetaExhangeCalculator());
-        private static List<OrderBook> OrderBooks = null;
+        public static List<OrderBook> OrderBooks = null;
 
         public static MetaExhangeCalculator Instance => _lazyInstance.Value;
 
-        public List<Order> FindBestAll(string type, decimal ammount, string path = null)
+        public List<Order> FindBestAll(string type, decimal ammount, List<OrderBook> _orderBooks = null, string path = null)
         {
-            if (OrderBooks == null)
+            if (OrderBooks == null && OrderBooks == null)
             {
                 OrderBooks = ReadBooks(path);
+            }
+            if (_orderBooks != null)
+            {
+                OrderBooks = _orderBooks;
             }
             decimal sumPrice = 0;
             decimal sumAmmount = 0;
@@ -43,13 +47,20 @@ namespace MetaExchangeConsole.models
             return best;
         }
 
-        private List<Order> FindBestOne(OrderBook books, string type, decimal ammount)
+        public List<Order> FindBestOne(OrderBook books, string type, decimal ammount)
         {
             List<Order> orders = type.ToUpper() == "BUY" ? books.Asks.Where(x => x.Order.Amount <= ammount).Select(x => x.Order).ToList() : books.Bids.Where(x => x.Order.Amount <= ammount).Select(x => x.Order).ToList();
-            return FindBest(type, ammount, orders);
+            if (type.ToUpper().Equals("BUY"))
+            {
+                return BestOne(type, ammount, orders);
+            }
+            else
+            {
+                return SolveKnapsack(books, type, ammount);
+            }
         }
 
-        private static List<Order> FindBest(string type, decimal ammount, List<Order> orders)
+        public static List<Order> BestOne(string type, decimal ammount, List<Order> orders)
         {
             orders = OrderByType(type, orders);
 
@@ -66,8 +77,80 @@ namespace MetaExchangeConsole.models
             }
             return ordersToExecute;
         }
+        public List<Order> SolveKnapsack(OrderBook books, string type, decimal ammount)
+        {
+            List<Order> items = type.ToUpper() == "BUY" ? books.Asks.Where(x => x.Order.Amount <= ammount).Select(x => x.Order).ToList() : books.Bids.Where(x => x.Order.Amount <= ammount).Select(x => x.Order).ToList();
 
-        private static List<Order> OrderByType(string type, List<Order> orders)
+            int n = items.Count;
+
+            // Dynamic programming dictionary to handle decimal weights
+            var dp = new List<Dictionary<decimal, decimal>>();
+            for (int i = 0; i <= n; i++)
+                dp.Add(new Dictionary<decimal, decimal>());
+
+            dp[0][0] = 0;
+
+            // Backtracking table to store item choices
+            var itemSelection = new Dictionary<(int, decimal), bool>();
+
+            // Fill the DP table
+            for (int i = 1; i <= n; i++)
+            {
+                var currentItem = items[i - 1];
+                foreach (var entry in dp[i - 1])
+                {
+                    decimal weight = entry.Key;
+                    decimal value = entry.Value;
+
+                    // Case 1: Exclude the item
+                    if (!dp[i].ContainsKey(weight) || dp[i][weight] < value)
+                        dp[i][weight] = value;
+
+                    // Case 2: Include the item, if within capacity
+                    decimal newWeight = weight + currentItem.Amount;
+                    decimal newValue = value + currentItem.Price;
+
+                    if (newWeight <= ammount)
+                    {
+                        if (!dp[i].ContainsKey(newWeight) || dp[i][newWeight] < newValue)
+                        {
+                            dp[i][newWeight] = newValue;
+                            itemSelection[(i, newWeight)] = true;
+                        }
+                    }
+                }
+            }
+
+            // Find the maximum value and reconstruct the selected items
+            decimal maxValue = 0;
+            decimal bestWeight = 0;
+            foreach (var entry in dp[n])
+            {
+                if (entry.Value > maxValue)
+                {
+                    maxValue = entry.Value;
+                    bestWeight = entry.Key;
+                }
+            }
+
+            // Traceback to find selected items
+            var selectedItems = new List<Order>();
+            for (int i = n; i > 0 && bestWeight >= 0; i--)
+            {
+                if (itemSelection.ContainsKey((i, bestWeight)) && itemSelection[(i, bestWeight)])
+                {
+                    var item = items[i - 1];
+                    selectedItems.Add(item);
+                    bestWeight -= item.Amount;
+                }
+            }
+
+            // Prepare the result
+            selectedItems.Reverse();
+            return selectedItems;
+        }
+
+        public static List<Order> OrderByType(string type, List<Order> orders)
         {
             if (type.ToUpper().Equals("BUY"))
             {
