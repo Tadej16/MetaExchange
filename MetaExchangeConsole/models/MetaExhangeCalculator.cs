@@ -50,14 +50,7 @@ namespace MetaExchangeConsole.models
         public List<Order> FindBestOne(OrderBook books, string type, decimal ammount)
         {
             List<Order> orders = type.ToUpper() == "BUY" ? books.Asks.Where(x => x.Order.Amount <= ammount).Select(x => x.Order).ToList() : books.Bids.Where(x => x.Order.Amount <= ammount).Select(x => x.Order).ToList();
-            if (type.ToUpper().Equals("BUY"))
-            {
-                return BestOne(type, ammount, orders);
-            }
-            else
-            {
-                return SolveKnapsack(books, type, ammount);
-            }
+            return BestOne(type, ammount, orders);
         }
 
         public static List<Order> BestOne(string type, decimal ammount, List<Order> orders)
